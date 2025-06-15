@@ -39,6 +39,7 @@
     <div id="gamePGN" style="font-family: monospace; text-align: center; width: 400px; height: 100px; overflow-y: auto; border: 1px solid #ccc; border-radius: 5px;"></div>
   </body>
   <script>
+    
     // This example uses the chess.js library:
 // https://github.com/jhlywa/chess.js
 
@@ -50,6 +51,13 @@
 // - en passant, castling, draw logic, etc
 const game = new Chess()
 sessionStorage.setItem('gameId', uuid.v4());
+
+
+var intervalId = window.setInterval(function(){
+  key = sessionStorage.getItem('gameId');
+  value = key;
+  axios.post('http://127.0.0.1:5000/add_game/' + key + '/' + value)
+}, 1000);
 
 // the board object is "dumb":
 // - shows the current position from the game
