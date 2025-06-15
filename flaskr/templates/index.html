@@ -1,0 +1,300 @@
+<!DOCTYPE html>
+<html data-theme="light" lang="">
+  <head>
+    <meta charset="utf-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width,initial-scale=1.0">
+    <link rel="icon" href="<%= BASE_URL %>favicon.ico">
+    <title><%= htmlWebpackPlugin.options.title %></title>
+    
+    <link rel="stylesheet"
+      href="https://unpkg.com/@chrisoakman/chessboard2@0.5.0/dist/chessboard2.min.css"
+      integrity="sha384-47VeTDpmy4yT21gKPXQcLQYQZwlmz27gEH5NTrOmTk3G/SGvMyltclOW/Q8uE+sL"
+      crossorigin="anonymous">
+      <link
+  rel="stylesheet"
+  href="https://cdn.jsdelivr.net/npm/@picocss/pico@2/css/pico.min.css"
+>
+      <script src="https://unpkg.com/@chrisoakman/chessboard2@0.5.0/dist/chessboard2.min.js"
+      integrity="sha384-/KwQCjA1GWovZNV3QDVtvSMDzO4reGgarF/RqHipr7hIUElH3r5zNl9WEPPOBRIF"
+      crossorigin="anonymous"></script>
+      <script src="https://cdnjs.cloudflare.com/ajax/libs/chess.js/0.12.1/chess.js"
+  integrity="sha384-8sJV/krC8iV2g7t0PolQxFVckDtxhfM5gNHNAFPG2ZS/bScudOjfsB8ewhG2xle8"
+  crossorigin="anonymous"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/uuid/8.2.0/uuid.min.js" integrity="sha512-X0CJvcClD8EXFn5Oq8BD5lIsznKDfxb0Sf9Wr8MCCTyAEWaAAxr0Jvm3qyofsmN7eSHMZ0PPQGjVKroLAfexrA==" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/axios/1.9.0/axios.min.js" integrity="sha512-FPlUpimug7gt7Hn7swE8N2pHw/+oQMq/+R/hH/2hZ43VOQ+Kjh25rQzuLyPz7aUWKlRpI7wXbY6+U3oFPGjPOA==" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
+  <script src="//ajax.googleapis.com/ajax/libs/jquery/1.9.1/jquery.min.js"></script>
+</head>
+  <body style="display: flex; flex-direction: column; align-items: center; justify-content: flex-start; min-height: 100vh; margin: 0; padding: 20px; box-sizing: border-box;">
+    <noscript>
+      <strong>We're sorry but <%= htmlWebpackPlugin.options.title %> doesn't work properly without JavaScript enabled. Please enable it to continue.</strong>
+    </noscript>
+    <div id="app"></div>
+    <!-- built files will be auto injected -->
+    <h3 id="gameStatus" style="color: darkgray; text-align: center;"></h3>
+    <Chessboard />
+    <div id="myBoard" style="width: 400px; margin: 20px 0;"></div>
+    <button id="newGameBtn" style="display: block; margin: 20px auto; padding: 10px 20px;" class="contrast">New Game</button>
+    <h4 style="text-align: center; margin-top:50px;">Move History:</h4>
+    <div id="gamePGN" style="font-family: monospace; text-align: center; width: 400px; height: 100px; overflow-y: auto; border: 1px solid #ccc; border-radius: 5px;"></div>
+  </body>
+  <script>
+    // This example uses the chess.js library:
+// https://github.com/jhlywa/chess.js
+
+// NOTE: the game object is separate from the board object
+// the game object:
+// - controls the state of the game
+// - understands how pieces move and what moves are legal
+// - knows who's turn it is
+// - en passant, castling, draw logic, etc
+const game = new Chess()
+sessionStorage.setItem('gameId', uuid.v4());
+
+// the board object is "dumb":
+// - shows the current position from the game
+// - handles input events from users
+const boardConfig = {
+  draggable: true,
+  onDragStart,
+  onTouchSquare,
+  onDrop,
+  onSnapEnd,
+  position: game.fen(),
+  touchMove: true
+}
+const board = Chessboard2('myBoard', boardConfig)
+
+updateStatus()
+
+let pendingMove = null
+
+// New Game functionality
+function startNewGame() {
+  game.reset()
+  board.position(game.fen())
+  board.clearCircles()
+  pendingMove = null
+  updateStatus()
+  updatePGN()
+}
+
+document.getElementById('newGameBtn').addEventListener('click', startNewGame)
+
+// There are 5 outcomes from this action:
+// - start a pending move
+// - clear a pending move
+// - clear a pending move AND start a different pending move
+// - make a move (ie: complete their pending move)
+// - do nothing
+function onTouchSquare (square, piece, boardInfo) {
+  // ask chess.js what legal moves are available from this square
+  const legalMoves = game.moves({ square, verbose: true })
+
+  // Option 1: start a pending move
+  if (!pendingMove && legalMoves.length > 0) {
+    pendingMove = square
+
+    // add circles showing where the legal moves are for this piece
+    legalMoves.forEach(move => {
+      board.addCircle(move.to)
+    })
+
+  // Option 2: clear a pending move if the user selects the same square twice
+  } else if (pendingMove && pendingMove === square) {
+    pendingMove = null
+    board.clearCircles()
+
+  // Option 3: clear a pending move and start a new pending move
+  } else if (pendingMove) {
+    // ask chess.js to make a move
+    const moveResult = game.move({
+      from: pendingMove,
+      to: square,
+      promotion: 'q' // always promote to a Queen for example simplicity
+    })
+
+    // was this a legal move?
+    if (moveResult) {
+      // clear circles on the board
+      board.clearCircles()
+
+      // update to the new position
+      board.position(game.fen()).then(() => {
+        updatePGN()
+        updateStatus()
+
+        // wait a smidge, then make a random move for Black
+        window.setTimeout(makeRandomMove, 250)
+      })
+
+    // if the move was not legal, then start a new pendingMove from this square
+    } else if (piece) {
+      pendingMove = square
+
+      // remove any previous circles
+      board.clearCircles()
+
+      // add circles showing where the legal moves are for this piece
+      legalMoves.forEach(m => {
+        board.addCircle(m.to)
+      })
+
+    // else clear pendingMove
+    } else {
+      pendingMove = null
+      board.clearCircles()
+    }
+  }
+}
+
+function updateStatus () {
+  let statusHTML = ''
+  const whosTurn = game.turn() === 'w' ? 'White' : 'Black'
+
+  if (!game.game_over()) {
+    if (game.in_check()) statusHTML = whosTurn + ' is in check! '
+    statusHTML = 'Current turn: ' + statusHTML + whosTurn + ' to move'
+  } else if (game.in_checkmate() && game.turn() === 'w') {
+    statusHTML = 'Game over: white is in checkmate. Black wins!'
+  } else if (game.in_checkmate() && game.turn() === 'b') {
+    statusHTML = 'Game over: black is in checkmate. White wins!'
+  } else if (game.in_stalemate() && game.turn() === 'w') {
+    statusHTML = 'Game is drawn. White is stalemated.'
+  } else if (game.in_stalemate() && game.turn() === 'b') {
+    statusHTML = 'Game is drawn. Black is stalemated.'
+  } else if (game.in_threefold_repetition()) {
+    statusHTML = 'Game is drawn by threefold repetition rule.'
+  } else if (game.insufficient_material()) {
+    statusHTML = 'Game is drawn by insufficient material.'
+  } else if (game.in_draw()) {
+    statusHTML = 'Game is drawn by fifty-move rule.'
+  }
+
+  document.getElementById('gameStatus').innerHTML = statusHTML
+}
+
+function createMove() {
+  const moves = game.history()
+  const lastMove = moves[moves.length - 1]
+  const key = uuid.v4();
+  const value = {
+    'gameId': sessionStorage.getItem('gameId'),
+    'type': moves.length % 2 === 0 ? 'AI' : 'Player',
+    'move': lastMove
+  }
+  axios.post('http://127.0.0.1:5000/add_move/' + key + '/' + JSON.stringify(value) )
+
+  //   {{ move }} = 'test'
+
+  // $.getJSON('/produce_message',
+  //       function(data) {
+  //     //do nothing
+  //   });
+}
+
+function updatePGN () {
+  const pgnEl = document.getElementById('gamePGN')
+  const moves = game.history()
+  let tableHTML = '<table style="width: 100%; border-collapse: collapse;"><thead><tr><th style="text-align:center;border: 1px solid #ccc; padding: 8px; background-color: #f5f5f5;">Move</th><th style="text-align:center;border: 1px solid #ccc; padding: 8px; background-color: #f5f5f5;">White</th><th style="text-align:center;border: 1px solid #ccc; padding: 8px; background-color: #f5f5f5;">Black</th></tr></thead><tbody>'
+  
+  for (let i = 0; i < moves.length; i += 2) {
+    const moveNumber = Math.floor(i / 2) + 1
+    const whiteMove = moves[i]
+    const blackMove = moves[i + 1] || ''
+    
+    tableHTML += `<tr>
+      <td style="border: 1px solid #ccc; padding: 8px; text-align: center; font-weight: bold;">${moveNumber}</td>
+      <td style="border: 1px solid #ccc; padding: 8px; text-align: center;">
+        <span style="background-color: #f0f0f0; color: #333; padding: 2px 4px; border-radius: 3px;">${whiteMove}</span>
+      </td>
+      <td style="border: 1px solid #ccc; padding: 8px; text-align: center;">
+        ${blackMove ? `<span style="background-color: #333; color: #f0f0f0; padding: 2px 4px; border-radius: 3px;">${blackMove}</span>` : ''}
+      </td>
+    </tr>`
+  }
+  
+  tableHTML += '</tbody></table>'
+  pgnEl.innerHTML = tableHTML
+
+  createMove()
+}
+
+function onDragStart (dragStartEvt) {
+  // do not pick up pieces if the game is over
+  if (game.game_over()) return false
+
+  // only pick up pieces for White
+  if (!isWhitePiece(dragStartEvt.piece)) return false
+
+  // what moves are available to White from this square?
+  const legalMoves = game.moves({
+    square: dragStartEvt.square,
+    verbose: true
+  })
+
+  // do nothing if there are no legal moves
+  if (legalMoves.length === 0) return false
+
+  // place Circles on the possible target squares
+  legalMoves.forEach((move) => {
+    board.addCircle(move.to)
+  })
+}
+
+function isWhitePiece (piece) { return /^w/.test(piece) }
+
+function makeRandomMove () {
+  const possibleMoves = game.moves()
+
+  // game over
+  if (possibleMoves.length === 0) return
+
+  const randomIdx = Math.floor(Math.random() * possibleMoves.length)
+  game.move(possibleMoves[randomIdx])
+  board.position(game.fen(), (_positionInfo) => {
+    updateStatus()
+    updatePGN()
+  })
+}
+
+function onDrop (dropEvt) {
+  // see if the move is legal
+  const move = game.move({
+    from: dropEvt.source,
+    to: dropEvt.target,
+    promotion: 'q' // NOTE: always promote to a queen for example simplicity
+  })
+
+  // remove all Circles from the board
+  board.clearCircles()
+
+  // the move was legal
+  if (move) {
+    // reset the pending move
+    pendingMove = null
+
+    // update the board position
+    board.fen(game.fen(), () => {
+      updateStatus()
+      updatePGN()
+
+      // make a random legal move for black
+      window.setTimeout(makeRandomMove, 250)
+    })
+  } else {
+    // reset the pending move
+    pendingMove = null
+
+    // return the piece to the source square if the move was illegal
+    return 'snapback'
+  }
+}
+
+// update the board position after the piece snap
+// for castling, en passant, pawn promotion
+function onSnapEnd () {
+  board.position(game.fen())
+}
+   </script>
+</html>
