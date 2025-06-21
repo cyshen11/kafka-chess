@@ -23,7 +23,9 @@ table_env.get_config().set("pipeline.jars", "file:////Users/vincentcheng/Documen
 # # 2. create source Table
 table_env.execute_sql("""
     CREATE TABLE games (
-        game_id VARCHAR
+        ts TIMESTAMP_LTZ(3) METADATA FROM 'timestamp'
+        ,game_id VARCHAR
+        ,WATERMARK FOR ts AS ts
     ) WITH (
         'connector' = 'kafka',
         'topic' = 'games',
@@ -35,9 +37,11 @@ table_env.execute_sql("""
 
 table_env.execute_sql("""
     CREATE TABLE moves (
-        game_id VARCHAR,
-        type VARCHAR,
-        move VARCHAR
+        ts TIMESTAMP_LTZ(3) METADATA FROM 'timestamp'
+        ,game_id VARCHAR
+        ,type VARCHAR
+        ,move VARCHAR
+        ,WATERMARK FOR ts AS ts
     ) WITH (
         'connector' = 'kafka',
         'topic' = 'moves',
@@ -49,20 +53,22 @@ table_env.execute_sql("""
 
 
 def get_games_count(table_env):
-    with table_env.execute_sql("SELECT COUNT(*) FROM games").collect() as results:
+    with table_env.execute_sql(
+       """
+       
+        SELECT TUMBLE_START(ts, INTERVAL '1' SECOND) time_window, COUNT(DISTINCT game_id) game_count
+        FROM games
+        GROUP BY TUMBLE(ts, INTERVAL '1' SECOND)
+      
+      """
+    ).collect() as results:
       for result in results:
-        yield(result.get_fields_by_names('game_id')[0])
+        yield(result[1])
 
-def get_moves(table_env):
-    with table_env.execute_sql("SELECT * FROM moves").collect() as results:
-      for result in results:
-        yield(result.get_fields_by_names('game_id')[0])
-
-@st.fragment(run_every=5)
-def update_dashboard(table_env):
-    # with st.empty():
-    st.write(get_games_count(table_env))
-    st.write(get_moves(table_env))
+# def get_moves(table_env):
+#     with table_env.execute_sql("SELECT * FROM moves").collect() as results:
+#       for result in results:
+#         yield('#' + str(result.get_fields_by_names('game_id')[1]))
       
 
 container_game_count = st.container(key='Game Count')
@@ -76,10 +82,14 @@ class WorkerThread1(Thread):
         self.table_env = table_env
 
     def run(self):
-        # runs in custom thread, but can call Streamlit APIs
         time.sleep(self.delay)
+        
         self.target = st.empty()
         self.target.write_stream(get_games_count(self.table_env))
+        # stream = get_games_count(self.table_env)
+        # for chunk in stream:
+        #   self.target = st.empty()
+        #   self.target.metric("Active Games", chunk)
 
 class WorkerThread2(Thread):
     def __init__(self, delay, target, table_env):
@@ -96,36 +106,25 @@ class WorkerThread2(Thread):
 
 threads = [
     WorkerThread1(1, container_game_count, table_env)
-    ,WorkerThread1(2, container_game_count_2, table_env)
+    # ,WorkerThread1(2, container_game_count_2, table_env)
 ]
 
-for thread in threads:
-    add_script_run_ctx(thread, get_script_run_ctx())
-    thread.start()
+# for thread in threads:
+#     add_script_run_ctx(thread, get_script_run_ctx())
+#     thread.start()
 
-for thread in threads:
-    thread.join()
+# for thread in threads:
+#     thread.join()
 
-# col1, col2 = st.columns([1, 2])
+col1, col2 = st.columns([1, 2])
 
-# with col1:
-#     st.subheader("📊 Game Statistics")
-#     update_dashboard(table_env)
-    
-    
-#     with ThreadPoolExecutor(max_workers=4) as executor:
-#         ctx = get_script_run_ctx()
-#         futures = [
-#             executor.submit(stream_games_count, table_env, ctx)
-#             ,executor.submit(stream_games_count, table_env, ctx)
-#         ]
+with col1:
+    st.subheader("📊 Game Statistics")
+    add_script_run_ctx(threads[0], get_script_run_ctx())
+    threads[0].start()
 
-    
-
-    # st.metric("Active Games", table_env.sql_query("SELECT COUNT(*) FROM games") \
-    # .execute_insert("print").wait())
-    # st.write_stream(table_env.execute_sql("SELECT * FROM games").collect())
-    # result_table = table_env.execute_sql("SELECT * FROM games")
+    for thread in threads:
+      thread.join()
 
     # if stats:
     #     st.metric("Active Games", table_env.execute_sql("""
