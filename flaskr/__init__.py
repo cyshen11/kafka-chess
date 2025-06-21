@@ -37,7 +37,7 @@ def create_app(test_config=None):
     def add_move(key, value):
       config = {
           # User-specific properties that you must set
-          'bootstrap.servers': 'localhost:50841',
+          'bootstrap.servers': 'localhost:9092',
 
           # Fixed properties
           'acks': 'all'
@@ -71,7 +71,7 @@ def create_app(test_config=None):
     def add_game(key, value):
       config = {
           # User-specific properties that you must set
-          'bootstrap.servers': 'localhost:50841',
+          'bootstrap.servers': 'localhost:9092',
 
           # Fixed properties
           'acks': 'all'
