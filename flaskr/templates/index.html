@@ -33,10 +33,13 @@
     <h1>Chess vs AI</h1>
     <h3 id="gameStatus" style="color: darkgray; text-align: center;"></h3>
     <Chessboard />
-    <div id="myBoard" style="width: 400px; margin: 20px 0;"></div>
-    <button id="newGameBtn" style="display: block; margin: 20px auto; padding: 10px 20px;" class="contrast">New Game</button>
-    <h4 style="text-align: center; margin-top:50px;">Move History:</h4>
-    <div id="gamePGN" style="font-family: monospace; text-align: center; width: 400px; height: 100px; overflow-y: auto; border: 1px solid #ccc; border-radius: 5px;"></div>
+    <div id="container1" style="display: flex; flex-direction: column; align-items: center;">
+      <div id="myBoard" style="width: 400px; margin: 20px 0;"></div>
+      <button id="newGameBtn" style="display: block; margin: 20px auto; padding: 10px 20px;" class="contrast">New Game</button>
+      <h4 style="text-align: center; margin-top:50px;">Move History:</h4>
+      <div id="gamePGN" style="font-family: monospace; text-align: center; width: 600px; height: 200px; overflow-y: auto; border: 1px solid #ccc; border-radius: 5px;"></div>
+    </div>
+    
   </body>
   <script>
     
@@ -218,23 +221,36 @@ function createMove() {
   //   });
 }
 
+function getPieceName(piece) {
+  const pieceNames = {
+    'p': 'Pawn',
+    'r': 'Rook',
+    'n': 'Knight',
+    'b': 'Bishop',
+    'q': 'Queen',
+    'k': 'King'
+  }
+  return pieceNames[piece] || piece
+}
+
 function updatePGN () {
   const pgnEl = document.getElementById('gamePGN')
-  const moves = game.history()
+  const moves = game.history({ verbose: true })
   let tableHTML = '<table style="width: 100%; border-collapse: collapse;"><thead><tr><th style="text-align:center;border: 1px solid #ccc; padding: 8px; background-color: #f5f5f5;">Move</th><th style="text-align:center;border: 1px solid #ccc; padding: 8px; background-color: #f5f5f5;">White</th><th style="text-align:center;border: 1px solid #ccc; padding: 8px; background-color: #f5f5f5;">Black</th></tr></thead><tbody>'
-  
+
+
   for (let i = 0; i < moves.length; i += 2) {
     const moveNumber = Math.floor(i / 2) + 1
     const whiteMove = moves[i]
-    const blackMove = moves[i + 1] || ''
+    const blackMove = moves[i + 1] || {'piece': '', 'from': '', 'to': ''}
     
     tableHTML += `<tr>
       <td style="border: 1px solid #ccc; padding: 8px; text-align: center; font-weight: bold;">${moveNumber}</td>
       <td style="border: 1px solid #ccc; padding: 8px; text-align: center;">
-        <span style="background-color: #f0f0f0; color: #333; padding: 2px 4px; border-radius: 3px;">${whiteMove}</span>
+        <span style="background-color: #f0f0f0; color: #333; padding: 2px 4px; border-radius: 3px;">${getPieceName(whiteMove.piece)} from ${whiteMove.from} to ${whiteMove.to}</span>
       </td>
       <td style="border: 1px solid #ccc; padding: 8px; text-align: center;">
-        ${blackMove ? `<span style="background-color: #333; color: #f0f0f0; padding: 2px 4px; border-radius: 3px;">${blackMove}</span>` : ''}
+        ${blackMove ? `<span style="background-color: #333; color: #f0f0f0; padding: 2px 4px; border-radius: 3px;">${getPieceName(blackMove.piece)} from ${blackMove.from} to ${blackMove.to}</span>` : ''}
       </td>
     </tr>`
   }
