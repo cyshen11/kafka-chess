@@ -36,7 +36,10 @@
     <div id="container1" style="display: flex; flex-direction: row; align-items: flex-start; gap: 40px; justify-content: center;">
       <div id="containerGame" style="display: flex; flex-direction: column; align-items: center; margin-right: 30px;">
         <div id="myBoard" style="width: 400px; margin: 20px 0;"></div>
-        <button id="newGameBtn" style="display: block; margin: 20px auto; padding: 10px 20px;" class="contrast">New Game</button>
+        <div style="display: flex; gap: 10px; justify-content: center; margin: 20px auto;">
+          <button id="newGameBtn" style="padding: 10px 20px;" class="contrast">New Game</button>
+          <button id="surrenderBtn" style="padding: 10px 20px;" class="secondary">Surrender</button>
+        </div>
       </div>
       <div id="containerMoveHistory" style="display: flex; flex-direction: column; align-items: center; margin-left: 30px;">
         <h4 style="text-align: center; margin-top:15px;">Move History:</h4>
@@ -67,21 +70,16 @@ function toISOStringLocal(d) {
           
 }
 
-function addGame() {
+function addGame(end_time) {
   key = sessionStorage.getItem('gameId');
-  value='"' + key + '","' + toISOStringLocal(new Date()) + '","' + toISOStringLocal(new Date('1970-01-01T00:00:00')) + '"'
+  value='"' + key + '","' + toISOStringLocal(new Date()) + '","' + end_time + '"'
   console.log(value)
   axios.post('http://127.0.0.1:5000/add_game/' + key + '/' + value)
 }
 
-// var intervalId = window.setInterval(function(){
-//   key = sessionStorage.getItem('gameId');
-//   value='"' + key + '","' + toISOStringLocal(new Date()) + '","' + toISOStringLocal(new Date('1970-01-01T00:00:00')) + '"'
-//   console.log(value)
-//   axios.post('http://127.0.0.1:5000/add_game/' + key + '/' + value)
-// }, 1000);
 
-addGame()
+// add new game to Kafka
+addGame(toISOStringLocal(new Date('1970-01-01T00:00:00')))
 
 // the board object is "dumb":
 // - shows the current position from the game
@@ -112,6 +110,13 @@ function startNewGame() {
 }
 
 document.getElementById('newGameBtn').addEventListener('click', startNewGame)
+
+function surrender() {
+  document.getElementById('gameStatus').innerHTML = 'Game over: White surrender. Black wins!'
+  addGame(toISOStringLocal(new Date()))
+}
+
+document.getElementById('surrenderBtn').addEventListener('click', surrender)
 
 // There are 5 outcomes from this action:
 // - start a pending move
