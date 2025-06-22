@@ -69,10 +69,6 @@ def get_games_count(table_env):
 #     with table_env.execute_sql("SELECT * FROM moves").collect() as results:
 #       for result in results:
 #         yield('#' + str(result.get_fields_by_names('game_id')[1]))
-      
-
-container_game_count = st.container(key='Game Count')
-container_game_count_2 = st.container(key='Game Count 2')
 
 class WorkerThread1(Thread):
     def __init__(self, delay, target, table_env):
@@ -83,13 +79,11 @@ class WorkerThread1(Thread):
 
     def run(self):
         time.sleep(self.delay)
-        
-        self.target = st.empty()
-        self.target.write_stream(get_games_count(self.table_env))
-        # stream = get_games_count(self.table_env)
-        # for chunk in stream:
-        #   self.target = st.empty()
-        #   self.target.metric("Active Games", chunk)
+        stream = get_games_count(self.table_env)
+        for chunk in stream:
+          with self.target.container():
+             st.metric("Active Games", chunk)
+             st.metric("Total Players", chunk)
 
 class WorkerThread2(Thread):
     def __init__(self, delay, target, table_env):
@@ -99,29 +93,32 @@ class WorkerThread2(Thread):
         self.table_env = table_env
 
     def run(self):
-        # runs in custom thread, but can call Streamlit APIs
         time.sleep(self.delay)
-        self.target = st.empty()
-        self.target.write_stream(get_moves(self.table_env))
+        stream = get_games_count(self.table_env)
+        for chunk in stream:
+          self.target.metric("Total Players", chunk)
 
-threads = [
-    WorkerThread1(1, container_game_count, table_env)
-    # ,WorkerThread1(2, container_game_count_2, table_env)
-]
-
-# for thread in threads:
-#     add_script_run_ctx(thread, get_script_run_ctx())
-#     thread.start()
-
-# for thread in threads:
-#     thread.join()
 
 col1, col2 = st.columns([1, 2])
 
+containers = [
+   
+]
+
 with col1:
     st.subheader("📊 Game Statistics")
-    add_script_run_ctx(threads[0], get_script_run_ctx())
-    threads[0].start()
+    # threads = [
+    #     WorkerThread1(1.1, st.empty(), table_env)
+    #     ,WorkerThread2(1, st.empty(), table_env)
+    # ]
+    threads = [
+        WorkerThread1(1.1, st.empty(), table_env)
+        # ,WorkerThread2(1, st.empty(), table_env)
+    ]
+
+    for thread in threads:
+        add_script_run_ctx(thread, get_script_run_ctx())
+        thread.start()
 
     for thread in threads:
       thread.join()
