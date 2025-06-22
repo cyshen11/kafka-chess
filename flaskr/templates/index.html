@@ -81,6 +81,10 @@ function addGame(end_time) {
 // add new game to Kafka
 addGame(toISOStringLocal(new Date('1970-01-01T00:00:00')))
 
+// const value2 = '" "," "," "," ","' + toISOStringLocal(new Date()) + '"'
+// console.log(value2)
+// axios.post('http://127.0.0.1:5000/add_move/123/' + value2)
+
 // the board object is "dumb":
 // - shows the current position from the game
 // - handles input events from users
@@ -212,22 +216,15 @@ function updateStatus () {
 }
 
 function createMove() {
-  const moves = game.history()
+  const moves = game.history({ verbose: true })
   const lastMove = moves[moves.length - 1]
   const key = uuid.v4();
-  const value = {
-    'gameId': sessionStorage.getItem('gameId'),
-    'type': moves.length % 2 === 0 ? 'AI' : 'Player',
-    'move': lastMove
-  }
-  axios.post('http://127.0.0.1:5000/add_move/' + key + '/' + JSON.stringify(value) )
-
-  //   {{ move }} = 'test'
-
-  // $.getJSON('/produce_message',
-  //       function(data) {
-  //     //do nothing
-  //   });
+  const player = lastMove.color == 'w' ? 'Player' : 'AI'
+  const move = `${getPieceName(lastMove.piece)} from ${lastMove.from} to ${lastMove.to}`
+  const value = '"' + key + '","' + sessionStorage.getItem('gameId') + '","' + player + '","' + move + '","' + toISOStringLocal(new Date()) + '"'
+  
+  console.log(value)
+  axios.post('http://127.0.0.1:5000/add_move/' + key + '/' + value)
 }
 
 function getPieceName(piece) {

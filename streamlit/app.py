@@ -38,21 +38,22 @@ table_env.execute_sql(f"""
     )
 """)
 
-# table_env.execute_sql("""
-#     CREATE TABLE moves (
-#         ts TIMESTAMP_LTZ(3) METADATA FROM 'timestamp'
-#         ,game_id VARCHAR
-#         ,type VARCHAR
-#         ,move VARCHAR
-#         ,WATERMARK FOR ts AS ts
-#     ) WITH (
-#         'connector' = 'kafka',
-#         'topic' = 'moves',
-#         'properties.bootstrap.servers' = 'localhost:9092',
-#         'scan.startup.mode' = 'earliest-offset',
-#         'value.format' = 'json'
-#     )
-# """)
+table_env.execute_sql(f"""
+    CREATE TABLE moves (
+        move_id VARCHAR
+        ,game_id VARCHAR
+        ,player VARCHAR
+        ,move VARCHAR
+        ,move_time TIMESTAMP(0)
+    ) WITH (
+        'connector' = 'kafka',
+        'topic' = 'moves',
+        'properties.bootstrap.servers' = 'localhost:9092',
+        'scan.startup.mode' = 'timestamp',
+        'scan.startup.timestamp-millis' = '{current_milli_time()}',
+        'value.format' = 'csv'
+    )
+""")
 
 
 def get_games_count(table_env):
@@ -80,10 +81,21 @@ def get_games_count(table_env):
       for result in results:
         yield(result)
 
-# def get_moves(table_env):
-#     with table_env.execute_sql("SELECT * FROM moves").collect() as results:
-#       for result in results:
-#         yield('#' + str(result.get_fields_by_names('game_id')[1]))
+def color_player_ai(value):
+    return f"background-color: #333; color: #f0f0f0;" if value == "AI" else "background-color: #f0f0f0; color: #333;"
+
+def get_moves(table_env):
+    # try:
+    
+    with table_env.execute_sql("SELECT game_id, player, move, move_time FROM moves").collect() as results:
+      moves = []
+      for result in results:
+          moves.append(result)
+          df = pd.DataFrame(moves, columns=['Game ID', 'Player', 'Move', 'Move Timestamp'])
+          df = df.style.applymap(color_player_ai, subset=["Player"])
+          yield(df)
+    # except:
+    #    yield('No moves yet')
 
 class WorkerThread1(Thread):
     def __init__(self, delay, target, table_env):
@@ -110,43 +122,31 @@ class WorkerThread2(Thread):
 
     def run(self):
         time.sleep(self.delay)
-        stream = get_games_count(self.table_env)
+        stream = get_moves(self.table_env)
+
         for chunk in stream:
-          self.target.metric("Total Players", chunk)
-
-
+              self.target.container().dataframe(chunk)
+        
 col1, col2 = st.columns([1, 2])
+col1.subheader("📊 Game Statistics")
+col2.subheader("🔄 Recent Moves")
 
-containers = [
-   
-]
+try:
+  threads = [
+     WorkerThread1(1.1, col1.empty(), table_env)
+    , WorkerThread2(1, col2.empty(), table_env)
 
-with col1:
-    st.subheader("📊 Game Statistics")
-    # threads = [
-    #     WorkerThread1(1.1, st.empty(), table_env)
-    #     ,WorkerThread2(1, st.empty(), table_env)
-    # ]
+  ]
 
-    try:
-      threads = [
-          WorkerThread1(1.1, st.empty(), table_env)
-          # ,WorkerThread2(1, st.empty(), table_env)
-      ]
+  for thread in threads:
+      add_script_run_ctx(thread, get_script_run_ctx())
+      thread.start()
 
-      for thread in threads:
-          add_script_run_ctx(thread, get_script_run_ctx())
-          thread.start()
+  for thread in threads:
+    thread.join()
+except:
+    st.info("Unable to fetch live data.")
 
-      for thread in threads:
-        thread.join()
-    except:
-       st.metric("Active Games", 0)
-       st.info("Unable to fetch live data.")
-
-# with col2:
-#     st.subheader("🔄 Recent Moves")
-    
 #     moves_data = fetch_moves()
     
 #     if moves_data:
