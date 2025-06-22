@@ -70,8 +70,11 @@ def get_games_count(table_env):
       WHERE YEAR(end_time) = 1970)
       */
       
-      SELECT COUNT(DISTINCT game_id) FROM games
-      WHERE YEAR(end_time) = 1970
+      SELECT COUNT(*) FROM (
+      SELECT game_id, COUNT(*) FROM games 
+      GROUP BY game_id
+      HAVING COUNT(*) = 1
+      )
       """
     ).collect() as results:
       for result in results:
