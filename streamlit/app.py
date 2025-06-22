@@ -1,7 +1,5 @@
 import streamlit as st
-import requests
 import pandas as pd
-from datetime import datetime
 import time
 from pyflink.table import EnvironmentSettings, TableEnvironment
 from pyflink.table import (EnvironmentSettings, TableEnvironment)
@@ -65,20 +63,22 @@ def get_games_count(table_env):
         FROM games
         GROUP BY TUMBLE(start_time, INTERVAL '1' HOUR)
 
-        SELECT COUNT(*) FROM
+        SELECT NULLIF(COUNT(*), 0) FROM
       (SELECT DISTINCT game_id FROM games
       WHERE YEAR(end_time) = 1970)
       */
       
-      SELECT COUNT(*) FROM (
-      SELECT game_id, COUNT(*) FROM games 
-      GROUP BY game_id
-      HAVING COUNT(*) = 1
+      SELECT 
+        SUM(CASE WHEN record_count = 1 THEN 1 ELSE 0 END) active_game_count
+        ,SUM(CASE WHEN record_count = 2 THEN 1 ELSE 0 END) completed_game_count
+      FROM (
+        SELECT game_id, COUNT(*) record_count FROM games 
+        GROUP BY game_id
       )
       """
     ).collect() as results:
       for result in results:
-        yield(result[0])
+        yield(result)
 
 # def get_moves(table_env):
 #     with table_env.execute_sql("SELECT * FROM moves").collect() as results:
@@ -97,8 +97,9 @@ class WorkerThread1(Thread):
         stream = get_games_count(self.table_env)
         for chunk in stream:
           with self.target.container():
-             st.metric("Active Games", chunk)
-             st.metric("Total Players", chunk)
+             st.metric("Active Games", chunk[0])
+             st.metric("Total Players", chunk[0])
+             st.metric("Games Completed Today", chunk[1])
 
 class WorkerThread2(Thread):
     def __init__(self, delay, target, table_env):
@@ -126,28 +127,22 @@ with col1:
     #     WorkerThread1(1.1, st.empty(), table_env)
     #     ,WorkerThread2(1, st.empty(), table_env)
     # ]
-    threads = [
-        WorkerThread1(1.1, st.empty(), table_env)
-        # ,WorkerThread2(1, st.empty(), table_env)
-    ]
 
-    for thread in threads:
-        add_script_run_ctx(thread, get_script_run_ctx())
-        thread.start()
+    try:
+      threads = [
+          WorkerThread1(1.1, st.empty(), table_env)
+          # ,WorkerThread2(1, st.empty(), table_env)
+      ]
 
-    for thread in threads:
-      thread.join()
+      for thread in threads:
+          add_script_run_ctx(thread, get_script_run_ctx())
+          thread.start()
 
-    # if stats:
-    #     st.metric("Active Games", table_env.execute_sql("""
-        
-    #       INSERT INTO print SELECT COUNT(*) FROM games").wait()
-    #                                                     """))
-        # st.metric("Total Players", stats.get('total_players', 0))
-        # st.metric("Games Completed Today", stats.get('games_today', 0))
-    # else:
-    #     st.metric("Active Games", 0)
-    #     st.info("Unable to fetch live data. Using demo data.")
+      for thread in threads:
+        thread.join()
+    except:
+       st.metric("Active Games", 0)
+       st.info("Unable to fetch live data.")
 
 # with col2:
 #     st.subheader("🔄 Recent Moves")
