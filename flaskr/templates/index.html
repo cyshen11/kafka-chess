@@ -33,11 +33,15 @@
     <h1>Chess vs AI</h1>
     <h3 id="gameStatus" style="color: darkgray; text-align: center;"></h3>
     <Chessboard />
-    <div id="container1" style="display: flex; flex-direction: column; align-items: center;">
-      <div id="myBoard" style="width: 400px; margin: 20px 0;"></div>
-      <button id="newGameBtn" style="display: block; margin: 20px auto; padding: 10px 20px;" class="contrast">New Game</button>
-      <h4 style="text-align: center; margin-top:50px;">Move History:</h4>
-      <div id="gamePGN" style="font-family: monospace; text-align: center; width: 600px; height: 200px; overflow-y: auto; border: 1px solid #ccc; border-radius: 5px;"></div>
+    <div id="container1" style="display: flex; flex-direction: row; align-items: flex-start; gap: 40px; justify-content: center;">
+      <div id="containerGame" style="display: flex; flex-direction: column; align-items: center; margin-right: 30px;">
+        <div id="myBoard" style="width: 400px; margin: 20px 0;"></div>
+        <button id="newGameBtn" style="display: block; margin: 20px auto; padding: 10px 20px;" class="contrast">New Game</button>
+      </div>
+      <div id="containerMoveHistory" style="display: flex; flex-direction: column; align-items: center; margin-left: 30px;">
+        <h4 style="text-align: center; margin-top:15px;">Move History:</h4>
+        <div id="gamePGN" style="font-family: monospace; text-align: center; width: 600px; overflow-y: auto; border: 1px solid #ccc; border-radius: 5px;height: 450px;"></div>
+      </div>
     </div>
     
   </body>
