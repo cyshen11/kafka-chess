@@ -52,12 +52,17 @@
 const game = new Chess()
 sessionStorage.setItem('gameId', uuid.v4());
 
-
-var intervalId = window.setInterval(function(){
+function addGame (endTime){
   key = sessionStorage.getItem('gameId');
-  value = key;
+  value = {
+    'gameId': key
+    ,'startTime': Date.now()
+    ,'endTime': endTime
+  };
   axios.post('http://127.0.0.1:5000/add_game/' + key + '/' + value)
-}, 1000);
+};
+
+addGame(null)
 
 // the board object is "dumb":
 // - shows the current position from the game
