@@ -20,50 +20,62 @@ table_env = TableEnvironment.create(EnvironmentSettings.in_streaming_mode())
 table_env.get_config().set("parallelism.default", "1")
 table_env.get_config().set("pipeline.jars", "file:////Users/vincentcheng/Documents/data_engineering/kafka-chess/streamlit/flink-sql-connector-kafka-4.0.0-2.0.jar")
 
+
+def current_milli_time():
+    return round(time.time() * 1000)
+
 # # 2. create source Table
-table_env.execute_sql("""
+table_env.execute_sql(f"""
     CREATE TABLE games (
-        ts TIMESTAMP_LTZ(3) METADATA FROM 'timestamp'
-        ,game_id VARCHAR
-        ,WATERMARK FOR ts AS ts
+        game_id VARCHAR
+        ,start_time TIMESTAMP(3)
+        ,end_time TIMESTAMP(3)
     ) WITH (
         'connector' = 'kafka',
         'topic' = 'games',
         'properties.bootstrap.servers' = 'localhost:9092',
-        'scan.startup.mode' = 'latest-offset',
+        'scan.startup.mode' = 'timestamp',
+        'scan.startup.timestamp-millis' = '{current_milli_time()}',
         'value.format' = 'csv'
     )
 """)
 
-table_env.execute_sql("""
-    CREATE TABLE moves (
-        ts TIMESTAMP_LTZ(3) METADATA FROM 'timestamp'
-        ,game_id VARCHAR
-        ,type VARCHAR
-        ,move VARCHAR
-        ,WATERMARK FOR ts AS ts
-    ) WITH (
-        'connector' = 'kafka',
-        'topic' = 'moves',
-        'properties.bootstrap.servers' = 'localhost:9092',
-        'scan.startup.mode' = 'earliest-offset',
-        'value.format' = 'json'
-    )
-""")
+# table_env.execute_sql("""
+#     CREATE TABLE moves (
+#         ts TIMESTAMP_LTZ(3) METADATA FROM 'timestamp'
+#         ,game_id VARCHAR
+#         ,type VARCHAR
+#         ,move VARCHAR
+#         ,WATERMARK FOR ts AS ts
+#     ) WITH (
+#         'connector' = 'kafka',
+#         'topic' = 'moves',
+#         'properties.bootstrap.servers' = 'localhost:9092',
+#         'scan.startup.mode' = 'earliest-offset',
+#         'value.format' = 'json'
+#     )
+# """)
 
 
 def get_games_count(table_env):
     with table_env.execute_sql(
        """
-       
-        SELECT TUMBLE_START(ts, INTERVAL '1' SECOND) time_window, COUNT(DISTINCT game_id) game_count
+       /*
+        SELECT TUMBLE_START(start_time, INTERVAL '1' HOUR) time_window, COUNT(DISTINCT game_id) game_count
         FROM games
-        GROUP BY TUMBLE(ts, INTERVAL '1' SECOND)
+        GROUP BY TUMBLE(start_time, INTERVAL '1' HOUR)
+
+        SELECT COUNT(*) FROM
+      (SELECT DISTINCT game_id FROM games
+      WHERE YEAR(end_time) = 1970)
+      */
       
+      SELECT COUNT(DISTINCT game_id) FROM games
+      WHERE YEAR(end_time) = 1970
       """
     ).collect() as results:
       for result in results:
-        yield(result[1])
+        yield(result[0])
 
 # def get_moves(table_env):
 #     with table_env.execute_sql("SELECT * FROM moves").collect() as results:

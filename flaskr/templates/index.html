@@ -52,17 +52,29 @@
 const game = new Chess()
 sessionStorage.setItem('gameId', uuid.v4());
 
-function addGame (endTime){
-  key = sessionStorage.getItem('gameId');
-  value = {
-    'gameId': key
-    ,'startTime': Date.now()
-    ,'endTime': endTime
-  };
-  axios.post('http://127.0.0.1:5000/add_game/' + key + '/' + value)
-};
+function toISOStringLocal(d) {
+  function z(n){return (n<10?'0':'') + n}
+  return d.getFullYear() + '-' + z(d.getMonth()+1) + '-' +
+         z(d.getDate()) + ' ' + z(d.getHours()) + ':' +
+         z(d.getMinutes()) + ':' + z(d.getSeconds())
+          
+}
 
-addGame(null)
+function addGame() {
+  key = sessionStorage.getItem('gameId');
+  value='"' + key + '","' + toISOStringLocal(new Date()) + '","' + toISOStringLocal(new Date('1970-01-01T00:00:00')) + '"'
+  console.log(value)
+  axios.post('http://127.0.0.1:5000/add_game/' + key + '/' + value)
+}
+
+// var intervalId = window.setInterval(function(){
+//   key = sessionStorage.getItem('gameId');
+//   value='"' + key + '","' + toISOStringLocal(new Date()) + '","' + toISOStringLocal(new Date('1970-01-01T00:00:00')) + '"'
+//   console.log(value)
+//   axios.post('http://127.0.0.1:5000/add_game/' + key + '/' + value)
+// }, 1000);
+
+addGame()
 
 // the board object is "dumb":
 // - shows the current position from the game
