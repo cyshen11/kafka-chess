@@ -132,7 +132,7 @@ class WorkerThread2(Thread):
         stream = get_moves(self.table_env)
 
         for chunk in stream:
-              self.target.container().dataframe(chunk)
+              self.target.container().dataframe(chunk, height=300)
 
 class WorkerThread3(Thread):
     def __init__(self, delay, target, table_env):
