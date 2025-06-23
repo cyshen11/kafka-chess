@@ -86,16 +86,30 @@ def get_moves(table_env):
 def get_quick_stats(table_env):
     with table_env.execute_sql(
         """
-          SELECT ROUND(AVG(game_length)) avg_game_length
-          FROM (
+          WITH stats_1 AS (
+            SELECT COALESCE(ROUND(AVG(game_length)), 0) avg_game_length
+            FROM (
+              SELECT 
+                t1.game_id
+                ,COALESCE(COUNT(move_id), 0) game_length
+              FROM games t1
+              LEFT JOIN moves t2 ON t1.game_id = t2.game_id
+              WHERE YEAR(end_time) > 1970
+              GROUP BY t1.game_id
+            )
+          ),
+
+          stats_2 AS (
             SELECT 
-              t1.game_id,
-              COUNT(move_id) game_length
-            FROM games t1
-            LEFT JOIN moves t2 ON t1.game_id = t2.game_id
-            WHERE YEAR(end_time) > 1970
-            GROUP BY t1.game_id
+              HOUR(start_time) peak_hour
+              ,COUNT(*)
+            FROM games 
+            GROUP BY HOUR(start_time)
+            ORDER BY COUNT(*) DESC
+            LIMIT 1
           )
+
+          SELECT * FROM stats_1, stats_2
         """
       ).collect() as results:
       for result in results:
@@ -147,6 +161,7 @@ class WorkerThread3(Thread):
         for chunk in stream:
               with self.target.container():
                   st.write(f"**Average Game Length:** {chunk[0]} moves")
+                  st.write(f"**Most Active Hour:** {int(chunk[1]) > 12 and f'{int(chunk[1]) - 12} PM' or f'{int(chunk[1])} AM'}")
         
 col1, col2 = st.columns([1, 2])
 col1.subheader("📊 Game Statistics")
