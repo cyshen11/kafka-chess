@@ -78,8 +78,10 @@ function addGame(end_time) {
 }
 
 
-// add new game to Kafka
+// Initialize
 addGame(toISOStringLocal(new Date('1970-01-01T00:00:00')))
+console.log(`/"${uuid.v4()}","${sessionStorage.getItem('gameId')}","_","_","${toISOStringLocal(new Date())}"`)
+axios.post('http://127.0.0.1:5000/add_move/' + uuid.v4() + `/"${uuid.v4()}","${sessionStorage.getItem('gameId')}","dummy","_","${toISOStringLocal(new Date())}"`)
 
 // const value2 = '" "," "," "," ","' + toISOStringLocal(new Date()) + '"'
 // console.log(value2)
