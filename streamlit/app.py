@@ -56,19 +56,9 @@ table_env.execute_sql(f"""
 """)
 
 
-def get_games_count(table_env):
+def get_games_stats(table_env):
     with table_env.execute_sql(
        """
-       /*
-        SELECT TUMBLE_START(start_time, INTERVAL '1' HOUR) time_window, COUNT(DISTINCT game_id) game_count
-        FROM games
-        GROUP BY TUMBLE(start_time, INTERVAL '1' HOUR)
-
-        SELECT NULLIF(COUNT(*), 0) FROM
-      (SELECT DISTINCT game_id FROM games
-      WHERE YEAR(end_time) = 1970)
-      */
-      
       SELECT 
         SUM(CASE WHEN record_count = 1 THEN 1 ELSE 0 END) active_game_count
         ,SUM(CASE WHEN record_count = 2 THEN 1 ELSE 0 END) completed_game_count
@@ -85,17 +75,31 @@ def color_player_ai(value):
     return f"background-color: #333; color: #f0f0f0;" if value == "AI" else "background-color: #f0f0f0; color: #333;"
 
 def get_moves(table_env):
-    # try:
-    
     with table_env.execute_sql("SELECT game_id, player, move, move_time FROM moves").collect() as results:
       moves = []
       for result in results:
           moves.append(result)
           df = pd.DataFrame(moves, columns=['Game ID', 'Player', 'Move', 'Move Timestamp'])
-          df = df.style.applymap(color_player_ai, subset=["Player"])
+          df = df.style.map(color_player_ai, subset=["Player"])
           yield(df)
-    # except:
-    #    yield('No moves yet')
+
+def get_quick_stats(table_env):
+    with table_env.execute_sql(
+        """
+          SELECT ROUND(AVG(game_length)) avg_game_length
+          FROM (
+            SELECT 
+              t1.game_id,
+              COUNT(move_id) game_length
+            FROM games t1
+            LEFT JOIN moves t2 ON t1.game_id = t2.game_id
+            WHERE YEAR(end_time) > 1970
+            GROUP BY t1.game_id
+          )
+        """
+      ).collect() as results:
+      for result in results:
+          yield(result)
 
 class WorkerThread1(Thread):
     def __init__(self, delay, target, table_env):
@@ -106,12 +110,15 @@ class WorkerThread1(Thread):
 
     def run(self):
         time.sleep(self.delay)
-        stream = get_games_count(self.table_env)
+        stream = get_games_stats(self.table_env)
         for chunk in stream:
           with self.target.container():
              st.metric("Active Games", chunk[0])
              st.metric("Total Players", chunk[0])
              st.metric("Games Completed Today", chunk[1])
+            #  st.write(f"**Active Games:** {chunk[0]} games")
+            #  st.write(f"**Total Players:** {chunk[0]} players")
+            #  st.write(f"**Games Completed Today:** {chunk[1]} games") 
 
 class WorkerThread2(Thread):
     def __init__(self, delay, target, table_env):
@@ -126,16 +133,38 @@ class WorkerThread2(Thread):
 
         for chunk in stream:
               self.target.container().dataframe(chunk)
+
+class WorkerThread3(Thread):
+    def __init__(self, delay, target, table_env):
+        super().__init__()
+        self.delay = delay
+        self.target = target
+        self.table_env = table_env
+
+    def run(self):
+        time.sleep(self.delay)
+        stream = get_quick_stats(self.table_env)
+        for chunk in stream:
+              with self.target.container():
+                  st.write(f"**Average Game Length:** {chunk[0]} moves")
         
 col1, col2 = st.columns([1, 2])
 col1.subheader("📊 Game Statistics")
 col2.subheader("🔄 Recent Moves")
 
+st.markdown("---")
+
+col3, col4 = st.columns(2)
+
+with col3:
+    st.subheader("🎯 Quick Stats")
+
 try:
   threads = [
-     WorkerThread1(1.1, col1.empty(), table_env)
-    , WorkerThread2(1, col2.empty(), table_env)
-
+     WorkerThread1(1.2, col1.empty(), table_env)
+    , WorkerThread2(1.1, col2.empty(), table_env)
+    , 
+    WorkerThread3(1, col3.empty(), table_env)
   ]
 
   for thread in threads:
@@ -147,43 +176,8 @@ try:
 except:
     st.info("Unable to fetch live data.")
 
-#     moves_data = fetch_moves()
-    
-#     if moves_data:
-#         df = pd.DataFrame(moves_data)
-#         if not df.empty:
-#             df['timestamp'] = pd.to_datetime(df['timestamp'])
-#             df = df.sort_values('timestamp', ascending=False).head(20)
-            
-#             st.dataframe(
-#                 df[['game_id', 'player', 'move', 'timestamp']],
-#                 use_container_width=True,
-#                 hide_index=True
-#             )
-#         else:
-#             st.info("No moves data available")
-#     else:
-#         demo_moves = [
-#             {"game_id": "game_001", "player": "Player1", "move": "e4", "timestamp": datetime.now()},
-#             {"game_id": "game_001", "player": "Player2", "move": "e5", "timestamp": datetime.now()},
-#             {"game_id": "game_002", "player": "Player3", "move": "Nf3", "timestamp": datetime.now()},
-#         ]
-#         df = pd.DataFrame(demo_moves)
-#         st.dataframe(
-#             df[['game_id', 'player', 'move', 'timestamp']],
-#             use_container_width=True,
-#             hide_index=True
-#         )
-#         st.info("Showing demo data. Check backend connection.")
 
-# st.markdown("---")
 
-# col3, col4 = st.columns(2)
-
-# with col3:
-#     st.subheader("🎯 Quick Stats")
-#     stats = fetch_stats() or {}
-    
 #     if stats:
 #         avg_game_length = stats.get('avg_game_length', 0)
 #         st.write(f"**Average Game Length:** {avg_game_length} moves")
