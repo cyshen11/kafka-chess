@@ -8,6 +8,7 @@ from streamlit.runtime.scriptrunner_utils.script_run_context import (
     add_script_run_ctx,
     get_script_run_ctx,
 )
+from datetime import datetime
 
 st.set_page_config(page_title="Chess Analytics", page_icon="♟️", layout="wide")
 
@@ -115,6 +116,7 @@ def get_quick_stats(table_env):
       for result in results:
           yield(result)
 
+
 class WorkerThread1(Thread):
     def __init__(self, delay, target, table_env):
         super().__init__()
@@ -162,24 +164,38 @@ class WorkerThread3(Thread):
               with self.target.container():
                   st.write(f"**Average Game Length:** {chunk[0]} moves")
                   st.write(f"**Most Active Hour:** {int(chunk[1]) > 12 and f'{int(chunk[1]) - 12} PM' or f'{int(chunk[1])} AM'}")
-        
+
+class WorkerThread4(Thread):
+    def __init__(self, delay, target):
+        super().__init__()
+        self.delay = delay
+        self.target = target
+
+    def run(self):
+        time.sleep(self.delay)
+        while True:
+            self.target.write("**Last Updated:** " + datetime.now().strftime("%H:%M:%S"))
+
 col1, col2 = st.columns([1, 2])
 col1.subheader("📊 Game Statistics")
 col2.subheader("🔄 Recent Moves")
 
 st.markdown("---")
 
-col3, col4 = st.columns(2)
+col3, col4 = st.columns([1, 2])
 
 with col3:
     st.subheader("🎯 Quick Stats")
 
+with col4:
+    st.subheader("⚡ Live Updates")
+
 try:
   threads = [
-     WorkerThread1(1.2, col1.empty(), table_env)
-    , WorkerThread2(1.1, col2.empty(), table_env)
-    , 
-    WorkerThread3(1, col3.empty(), table_env)
+     WorkerThread1(1.3, col1.empty(), table_env)
+    , WorkerThread2(1.2, col2.empty(), table_env)
+    , WorkerThread3(1.1, col3.empty(), table_env)
+    , WorkerThread4(1, col4.empty())
   ]
 
   for thread in threads:
@@ -193,18 +209,3 @@ except:
 
 
 
-#     if stats:
-#         avg_game_length = stats.get('avg_game_length', 0)
-#         st.write(f"**Average Game Length:** {avg_game_length} moves")
-#         st.write(f"**Most Active Hour:** {stats.get('peak_hour', 'N/A')}")
-#     else:
-#         st.write("**Average Game Length:** 25 moves")
-#         st.write("**Most Active Hour:** 8 PM")
-
-# with col4:
-#     st.subheader("⚡ Live Updates")
-#     st.write("**Last Updated:** " + datetime.now().strftime("%H:%M:%S"))
-    
-#     if st.checkbox("Auto-refresh (every 10s)"):
-#         time.sleep(10)
-#         st.rerun()
