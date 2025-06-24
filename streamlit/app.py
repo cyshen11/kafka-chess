@@ -13,6 +13,7 @@ from datetime import datetime
 st.set_page_config(page_title="Chess Analytics", page_icon="♟️", layout="wide")
 
 st.title("♟️ Chess Web App Analytics")
+st.write("Built with Streamlit and PyFlink")
 
 # 1. create a TableEnvironment
 table_env = TableEnvironment.create(EnvironmentSettings.in_streaming_mode())
