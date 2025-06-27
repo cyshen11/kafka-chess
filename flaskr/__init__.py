@@ -2,6 +2,11 @@ import os
 
 from flask import Flask, render_template
 from confluent_kafka import Producer
+from dotenv import load_dotenv
+
+load_dotenv()
+
+KAFKA_SERVER = os.getenv('KAFKA_SERVER')
 
 def create_app(test_config=None):
     # create and configure the app
@@ -37,7 +42,7 @@ def create_app(test_config=None):
     def add_move(key, value):
       config = {
           # User-specific properties that you must set
-          'bootstrap.servers': 'localhost:9092',
+          'bootstrap.servers': KAFKA_SERVER,
 
           # Fixed properties
           'acks': 'all'
@@ -71,7 +76,7 @@ def create_app(test_config=None):
     def add_game(key, value):
       config = {
           # User-specific properties that you must set
-          'bootstrap.servers': 'localhost:9092',
+          'bootstrap.servers': KAFKA_SERVER,
 
           # Fixed properties
           'acks': 'all'
