@@ -44,3 +44,4 @@ venv/
 env/
 .env
 .DS_Store
+*.pem
