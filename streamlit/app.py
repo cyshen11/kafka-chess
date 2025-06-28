@@ -108,7 +108,7 @@ def get_quick_stats(table_env):
               FROM games t1
               LEFT JOIN moves t2 ON t1.game_id = t2.game_id
               WHERE YEAR(end_time) = 1970
-              AND player <> 'dummy'
+              -- AND player <> 'dummy'
               GROUP BY t1.game_id
             )
           ),
@@ -128,56 +128,6 @@ def get_quick_stats(table_env):
       ).collect() as results:
       for result in results:
           yield(result)
-
-def query(table_env):
-    with table_env.execute_sql(
-        """
-          WITH moves_result AS (
-            SELECT game_id, player, move, move_time FROM moves
-          ),
-
-          game_stats AS (
-            SELECT 
-              SUM(CASE WHEN record_count = 1 THEN 1 ELSE 0 END) active_game_count
-              ,SUM(CASE WHEN record_count = 2 THEN 1 ELSE 0 END) completed_game_count
-            FROM (
-              SELECT game_id, COUNT(*) record_count FROM games 
-              GROUP BY game_id
-            )
-          ),
-
-          stats_avg_game_length AS (
-            SELECT COALESCE(ROUND(AVG(game_length)), 0) avg_game_length
-            FROM (
-              SELECT 
-                t1.game_id
-                ,COALESCE(COUNT(move_id), 0) game_length
-              FROM games t1
-              LEFT JOIN moves t2 ON t1.game_id = t2.game_id
-              WHERE YEAR(end_time) = 1970
-              GROUP BY t1.game_id
-            )
-          ),
-
-          stats_peak_hour AS (
-            SELECT 
-              HOUR(start_time) peak_hour
-            FROM games 
-            GROUP BY HOUR(start_time)
-            ORDER BY COUNT(*) DESC
-            LIMIT 1
-          )
-          
-          SELECT *
-          FROM moves_result, game_stats, stats_avg_game_length, stats_peak_hour
-        """
-      ).collect() as results:
-      moves = []
-      for result in results:
-          moves.append(result[0:4])
-          # df = pd.DataFrame(results_2, columns=['Game ID', 'Player', 'Move', 'Move Timestamp', 'Active Game Count', 'Completed Game Count', 'Average Game Length', 'Peak Hour']) # exclude first dummy record (initialized to avoid null object)
-          # df = df.style.map(color_player_ai, subset=["Player"])
-          yield(moves, result[4], result[5], result[6], result[7])
 
 class WorkerThread1(Thread):
     def __init__(self, delay, target, table_env):
@@ -238,33 +188,6 @@ class WorkerThread4(Thread):
         while True:
             self.target.write("**Last Updated:** " + datetime.now().strftime("%H:%M:%S"))
 
-class WorkerThread5(Thread):
-    def __init__(self, delay, col1, col2, col3, col4, table_env):
-        super().__init__()
-        self.delay = delay
-        self.col1 = col1
-        self.col2 = col2
-        self.col3 = col3
-        self.col4 = col4
-        self.table_env = table_env
-
-    def run(self):
-        time.sleep(self.delay)
-        stream = query(self.table_env)
-        for moves, active_game_count, completed_game_count, avg_game_length, peak_hour in stream:
-             df = pd.DataFrame(moves, columns=['Game ID', 'Player', 'Move', 'Move Timestamp'])
-             df.drop_duplicates(inplace=True)
-             df = df.style.map(color_player_ai, subset=["Player"])
-             self.col2.container().dataframe(df, height=400)
-             with self.col1.container():
-                st.metric("Active Games", active_game_count)
-                st.metric("Total Players", active_game_count)
-                st.metric("Games Completed Today", completed_game_count)
-             
-             with self.col3.container():
-                st.write(f"**Average Game Length:** {avg_game_length} moves")
-                # st.write(f"**Most Active Hour:** {int(peak_hour) > 12 and f'{int(peak_hour) - 12} PM' or f'{int(peak_hour)} AM'}")
-
 col1, col2 = st.columns([1, 2])
 col1.subheader("📊 Game Statistics")
 col2.subheader("🔄 Recent Moves")
@@ -284,8 +207,8 @@ try:
   threads = [
      WorkerThread1(1.2, col1.empty(), table_env)
     , WorkerThread2(1.1, col2.empty(), table_env)
-    # , WorkerThread3(1, col3.empty(), table_env)
-    # , WorkerThread4(1.3, col4.empty())
+    , WorkerThread3(1, col3.empty(), table_env)
+    , WorkerThread4(1.3, col4.empty())
   ]
 
   for thread in threads:
