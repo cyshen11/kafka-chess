@@ -13,6 +13,12 @@ config = {
 
         'request.timeout.ms': 60000,
 
+        'delivery.timeout.ms': 60000,
+
+        'transaction.timeout.ms': 60000,
+
+        
+
           # Fixed properties
           'acks': 'all'
       }
