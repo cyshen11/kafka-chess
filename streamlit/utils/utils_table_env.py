@@ -1,15 +1,18 @@
 from pyflink.table import EnvironmentSettings, TableEnvironment
 import pandas as pd
 from utils.utils_helper import *
+from dotenv import load_dotenv
+import os
+
+load_dotenv()
 
 class TableEnvCustomized():
   def __init__(self):
-    # super().__init__()
     self.table_env = TableEnvironment.create(EnvironmentSettings.in_streaming_mode())
     self.table_env.get_config().set("parallelism.default", "1")
     self.table_env.get_config().set(
         "pipeline.jars",
-        "file:////Users/vincentcheng/Documents/data_engineering/kafka-chess/streamlit/flink-sql-connector-kafka-4.0.0-2.0.jar",
+        f"file:////{os.getenv('ABSOLUTE_PATH_TO_JAR_FILE')}",
     )
   
   def create_source_tables(self):
