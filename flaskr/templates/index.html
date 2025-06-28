@@ -6,24 +6,13 @@
     <meta name="viewport" content="width=device-width,initial-scale=1.0">
     <link rel="icon" href="<%= BASE_URL %>favicon.ico">
     <title>Chess vs AI</title>
-    
-    <link rel="stylesheet"
-      href="https://unpkg.com/@chrisoakman/chessboard2@0.5.0/dist/chessboard2.min.css"
-      integrity="sha384-47VeTDpmy4yT21gKPXQcLQYQZwlmz27gEH5NTrOmTk3G/SGvMyltclOW/Q8uE+sL"
-      crossorigin="anonymous">
-      <link
-  rel="stylesheet"
-  href="https://cdn.jsdelivr.net/npm/@picocss/pico@2/css/pico.min.css"
->
-      <script src="https://unpkg.com/@chrisoakman/chessboard2@0.5.0/dist/chessboard2.min.js"
-      integrity="sha384-/KwQCjA1GWovZNV3QDVtvSMDzO4reGgarF/RqHipr7hIUElH3r5zNl9WEPPOBRIF"
-      crossorigin="anonymous"></script>
-      <script src="https://cdnjs.cloudflare.com/ajax/libs/chess.js/0.12.1/chess.js"
-  integrity="sha384-8sJV/krC8iV2g7t0PolQxFVckDtxhfM5gNHNAFPG2ZS/bScudOjfsB8ewhG2xle8"
-  crossorigin="anonymous"></script>
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/uuid/8.2.0/uuid.min.js" integrity="sha512-X0CJvcClD8EXFn5Oq8BD5lIsznKDfxb0Sf9Wr8MCCTyAEWaAAxr0Jvm3qyofsmN7eSHMZ0PPQGjVKroLAfexrA==" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/axios/1.9.0/axios.min.js" integrity="sha512-FPlUpimug7gt7Hn7swE8N2pHw/+oQMq/+R/hH/2hZ43VOQ+Kjh25rQzuLyPz7aUWKlRpI7wXbY6+U3oFPGjPOA==" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
-  <script src="//ajax.googleapis.com/ajax/libs/jquery/1.9.1/jquery.min.js"></script>
+    <link rel= "stylesheet" type= "text/css" href= "{{ url_for('static',filename='css/chessboard2.css') }}">
+    <link rel= "stylesheet" type= "text/css" href= "{{ url_for('static',filename='css/pico.css') }}">
+    <script src="{{ url_for('static',filename='js/chessboard2.js') }}"></script>
+    <script src="{{ url_for('static',filename='js/chess.js') }}"></script>
+    <script src="{{ url_for('static',filename='js/uuid.js') }}"></script>
+    <script src="{{ url_for('static',filename='js/axios.js') }}"></script>
+    <script src="{{ url_for('static',filename='js/jquery.js') }}"></script>
 </head>
   <body style="display: flex; flex-direction: column; align-items: center; justify-content: flex-start; min-height: 100vh; margin: 0; padding: 20px; box-sizing: border-box;">
     <noscript>
