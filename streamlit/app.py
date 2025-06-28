@@ -57,6 +57,16 @@ table_env.execute_sql(f"""
     )
 """)
 
+table_env.execute_sql(f"""
+  INSERT INTO games
+  VALUES ('dummy', CURRENT_TIMESTAMP(), TIMESTAMP '1970-01-01 00:00:00')
+""")
+
+table_env.execute_sql(f"""
+  INSERT INTO moves
+  VALUES ('dummy', 'dummy', 'dummy', 'dummy', CURRENT_TIMESTAMP())
+""")
+
 
 def get_games_stats(table_env):
     with table_env.execute_sql(
@@ -274,8 +284,8 @@ try:
   threads = [
      WorkerThread1(1.2, col1.empty(), table_env)
     , WorkerThread2(1.1, col2.empty(), table_env)
-    , WorkerThread3(1, col3.empty(), table_env)
-    , WorkerThread4(1.3, col4.empty())
+    # , WorkerThread3(1, col3.empty(), table_env)
+    # , WorkerThread4(1.3, col4.empty())
   ]
 
   for thread in threads:

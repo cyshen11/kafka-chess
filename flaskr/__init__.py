@@ -6,18 +6,10 @@ from dotenv import load_dotenv
 
 load_dotenv()
 
-KAFKA_SERVER = os.getenv('KAFKA_SERVER')
+KAFKA_SERVER = 'localhost:9092'
 config = {
           # User-specific properties that you must set
           'bootstrap.servers': KAFKA_SERVER,
-
-        'request.timeout.ms': 60000,
-
-        'delivery.timeout.ms': 60000,
-
-        'transaction.timeout.ms': 60000,
-
-        
 
           # Fixed properties
           'acks': 'all'
