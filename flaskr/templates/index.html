@@ -1,70 +1,104 @@
 <!DOCTYPE html>
-<html data-theme="light" lang="">
+<!-- Chess vs AI Web Application Template -->
+<html data-theme="light" lang="en">
   <head>
+    <!-- Meta tags for browser compatibility and mobile responsiveness -->
     <meta charset="utf-8">
     <meta http-equiv="X-UA-Compatible" content="IE=edge">
     <meta name="viewport" content="width=device-width,initial-scale=1.0">
     <link rel="icon" href="<%= BASE_URL %>favicon.ico">
     <title>Chess vs AI</title>
-    <link rel= "stylesheet" type= "text/css" href= "{{ url_for('static',filename='css/chessboard2.css') }}">
-    <link rel= "stylesheet" type= "text/css" href= "{{ url_for('static',filename='css/pico.css') }}">
-    <script src="{{ url_for('static',filename='js/chessboard2.js') }}"></script>
-    <script src="{{ url_for('static',filename='js/chess.js') }}"></script>
-    <script src="{{ url_for('static',filename='js/uuid.js') }}"></script>
-    <script src="{{ url_for('static',filename='js/axios.js') }}"></script>
-    <script src="{{ url_for('static',filename='js/jquery.js') }}"></script>
-    <script src="{{ url_for('static',filename='js/chess_actions.js') }}"></script>
-</head>
-<body style="display: flex; flex-direction: column; align-items: center; justify-content: flex-start; min-height: 100vh; margin: 0; padding: 20px; box-sizing: border-box;">
-  <div id="app"></div>
-  <h1>Chess vs AI</h1>
-  <h3 id="gameStatus" style="color: darkgray; text-align: center;"></h3>
-  <Chessboard />
-  <div id="container1" style="display: flex; flex-direction: row; align-items: flex-start; gap: 40px; justify-content: center;">
-    <div id="containerGame" style="display: flex; flex-direction: column; align-items: center; margin-right: 30px;">
-      <div id="myBoard" style="width: 400px; margin: 20px 0;"></div>
-      <div style="display: flex; gap: 10px; justify-content: center; margin: 20px auto;">
-        <button id="newGameBtn" style="padding: 10px 20px;" class="contrast">New Game</button>
-        <button id="surrenderBtn" style="padding: 10px 20px;" class="secondary">Surrender</button>
+    
+    <!-- External CSS Dependencies -->
+    <link rel="stylesheet" type="text/css" href="{{ url_for('static',filename='css/chessboard2.css') }}"> <!-- Chessboard styling -->
+    <link rel="stylesheet" type="text/css" href="{{ url_for('static',filename='css/pico.css') }}"> <!-- UI framework -->
+    
+    <!-- JavaScript Libraries -->
+    <script src="{{ url_for('static',filename='js/chessboard2.js') }}"></script> <!-- Chessboard rendering library -->
+    <script src="{{ url_for('static',filename='js/chess.js') }}"></script> <!-- Chess game logic and rules -->
+    <script src="{{ url_for('static',filename='js/uuid.js') }}"></script> <!-- UUID generation for game IDs -->
+    <script src="{{ url_for('static',filename='js/axios.js') }}"></script> <!-- HTTP client for API calls -->
+    <script src="{{ url_for('static',filename='js/jquery.js') }}"></script> <!-- DOM manipulation -->
+    <script src="{{ url_for('static',filename='js/chess_actions.js') }}"></script> <!-- Custom chess game actions -->
+  </head>
+  
+  <!-- Main page layout: centered vertical column -->
+  <body style="display: flex; flex-direction: column; align-items: center; justify-content: flex-start; min-height: 100vh; margin: 0; padding: 20px; box-sizing: border-box;">
+    <!-- App container for framework integration -->
+    <div id="app"></div>
+    
+    <!-- Page header -->
+    <h1>Chess vs AI</h1>
+    
+    <!-- Game status display (populated by JavaScript) -->
+    <h3 id="gameStatus" style="color: darkgray; text-align: center;"></h3>
+    
+    <!-- Main content layout: side-by-side game board and move history -->
+    <div id="container1" style="display: flex; flex-direction: row; align-items: flex-start; gap: 40px; justify-content: center;">
+      
+      <!-- Left section: Chess board and game controls -->
+      <div id="containerGame" style="display: flex; flex-direction: column; align-items: center; margin-right: 30px;">
+        <!-- Chess board container (board rendered here by JavaScript) -->
+        <div id="myBoard" style="width: 400px; margin: 20px 0;"></div>
+        
+        <!-- Game control buttons -->
+        <div style="display: flex; gap: 10px; justify-content: center; margin: 20px auto;">
+          <button id="newGameBtn" style="padding: 10px 20px;" class="contrast">New Game</button>
+          <button id="surrenderBtn" style="padding: 10px 20px;" class="secondary">Surrender</button>
+        </div>
+      </div>
+      
+      <!-- Right section: Move history display -->
+      <div id="containerMoveHistory" style="display: flex; flex-direction: column; align-items: center; margin-left: 30px;">
+        <h4 style="text-align: center; margin-top: 15px;">Move History:</h4>
+        <!-- Scrollable container for PGN (Portable Game Notation) move history -->
+        <div id="gamePGN" style="font-family: monospace; text-align: center; width: 600px; overflow-y: auto; border: 1px solid #ccc; border-radius: 5px; height: 450px;"></div>
       </div>
     </div>
-    <div id="containerMoveHistory" style="display: flex; flex-direction: column; align-items: center; margin-left: 30px;">
-      <h4 style="text-align: center; margin-top:15px;">Move History:</h4>
-      <div id="gamePGN" style="font-family: monospace; text-align: center; width: 600px; overflow-y: auto; border: 1px solid #ccc; border-radius: 5px;height: 450px;"></div>
-    </div>
-  </div>
-  
-</body>
-<script>
-// Initialize
-const game = new Chess();
 
-sessionStorage.setItem('gameId', uuid.v4());
+    <script>
+      // Chess Game Initialization
+      
+      // Create new chess game instance using chess.js library
+      const game = new Chess();
 
-addGame(toISOStringLocal(new Date('1970-01-01T00:00:00')))
-console.log(`/"${uuid.v4()}","${sessionStorage.getItem('gameId')}","_","_","${toISOStringLocal(new Date())}"`)
+      // Generate unique game ID and store in session storage
+      sessionStorage.setItem('gameId', uuid.v4());
 
-axios.post('http://127.0.0.1:5000/add_move/' + uuid.v4() + `/"${uuid.v4()}","${sessionStorage.getItem('gameId')}","dummy","_","${toISOStringLocal(new Date())}"`)
+      // Initialize game data in backend (with epoch timestamp)
+      addGame(toISOStringLocal(new Date('1970-01-01T00:00:00')))
+      
+      // Debug logging for game initialization
+      console.log(`/"${uuid.v4()}","${sessionStorage.getItem('gameId')}","_","_","${toISOStringLocal(new Date())}"`)
 
-// the board object is "dumb":
-// - shows the current position from the game
-// - handles input events from users
-const boardConfig = {
-  draggable: true,
-  onDragStart,
-  onTouchSquare,
-  onDrop,
-  onSnapEnd,
-  position: game.fen(),
-  touchMove: true
-}
-const board = Chessboard2('myBoard', boardConfig)
+      // Send initial dummy move to backend API
+      axios.post('http://127.0.0.1:5000/add_move/' + uuid.v4() + `/"${uuid.v4()}","${sessionStorage.getItem('gameId')}","dummy","_","${toISOStringLocal(new Date())}"`)
 
-updateStatus()
+      // Chessboard Configuration
+      // The board object handles visual representation and user interaction
+      // while the game object handles chess rules and logic
+      const boardConfig = {
+        draggable: true,        // Allow piece dragging
+        onDragStart,           // Function called when drag starts
+        onTouchSquare,         // Function for touch/click interactions
+        onDrop,               // Function called when piece is dropped
+        onSnapEnd,            // Function called after piece animation ends
+        position: game.fen(), // Set initial board position from game state
+        touchMove: true       // Enable touch-based moves on mobile
+      }
+      
+      // Initialize the visual chessboard in the myBoard div
+      const board = Chessboard2('myBoard', boardConfig)
 
-let pendingMove = null
+      // Update game status display (check, checkmate, etc.)
+      updateStatus()
 
-document.getElementById('newGameBtn').addEventListener('click', startNewGame)
-document.getElementById('surrenderBtn').addEventListener('click', surrender)
-</script>
+      // Variable to track moves in progress
+      let pendingMove = null
+
+      // Event Listeners for Game Controls
+      document.getElementById('newGameBtn').addEventListener('click', startNewGame)
+      document.getElementById('surrenderBtn').addEventListener('click', surrender)
+    </script>
+  </body>
 </html>
