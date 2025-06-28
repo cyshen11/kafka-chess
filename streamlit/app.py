@@ -11,10 +11,10 @@ col2.subheader("🔄 Recent Moves")
 
 st.markdown("---")
 
-col3, col4 = st.columns([1, 2])
+col4, col3 = st.columns([1, 2])
 
-with col3:
-    st.subheader("🎯 Quick Stats")
+# with col3:
+#     st.subheader("🎯 Quick Stats")
 
 with col4:
     st.subheader("⚡ Live Updates")
