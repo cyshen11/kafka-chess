@@ -103,7 +103,7 @@ try:
     threads = [
         WorkerThread1(1.2, col1.empty(), table_env),
         WorkerThread2(1.1, col2.empty(), table_env),
-        WorkerThread3(1, col3.empty(), table_env),
+        # WorkerThread3(1, col3.empty(), table_env),
         WorkerThread4(1.3, col4.empty()),
     ]
 

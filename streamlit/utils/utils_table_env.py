@@ -1,16 +1,6 @@
 from pyflink.table import EnvironmentSettings, TableEnvironment
-import time
 import pandas as pd
-
-def current_milli_time():
-    return round(time.time() * 1000)
-
-def color_player_ai(value):
-    return (
-        f"background-color: #333; color: #f0f0f0;"
-        if value == "AI"
-        else "background-color: #f0f0f0; color: #333;"
-    )
+from utils.utils_helper import *
 
 class TableEnvCustomized():
   def __init__(self):
