@@ -7,6 +7,28 @@ from dotenv import load_dotenv
 load_dotenv()
 
 KAFKA_SERVER = os.getenv('KAFKA_SERVER')
+config = {
+          # User-specific properties that you must set
+          'bootstrap.servers': KAFKA_SERVER,
+
+        'request.timeout.ms': 60000,
+
+          # Fixed properties
+          'acks': 'all'
+      }
+
+# Create Producer instance
+producer = Producer(config)
+
+# Optional per-message delivery callback (triggered by poll() or flush())
+# when a message has been successfully delivered or permanently
+# failed delivery (after retries).
+def delivery_callback(err, msg):
+    if err:
+        print('ERROR: Message failed delivery: {}'.format(err))
+    else:
+        print("Produced event to topic {topic}: key = {key:12} value = {value:12}".format(
+            topic=msg.topic(), key=msg.key().decode('utf-8'), value=msg.value().decode('utf-8')))
 
 def create_app(test_config=None):
     # create and configure the app
@@ -40,27 +62,6 @@ def create_app(test_config=None):
     
     @app.route('/add_move/<key>/<value>', methods=['POST'])
     def add_move(key, value):
-      config = {
-          # User-specific properties that you must set
-          'bootstrap.servers': KAFKA_SERVER,
-
-          # Fixed properties
-          'acks': 'all'
-      }
-
-      # Create Producer instance
-      producer = Producer(config)
-
-      # Optional per-message delivery callback (triggered by poll() or flush())
-      # when a message has been successfully delivered or permanently
-      # failed delivery (after retries).
-      def delivery_callback(err, msg):
-          if err:
-              print('ERROR: Message failed delivery: {}'.format(err))
-          else:
-              print("Produced event to topic {topic}: key = {key:12} value = {value:12}".format(
-                  topic=msg.topic(), key=msg.key().decode('utf-8'), value=msg.value().decode('utf-8')))
-
       # Produce data by selecting random values from these lists.
       topic = "moves"
 
@@ -74,27 +75,6 @@ def create_app(test_config=None):
     
     @app.route('/add_game/<key>/<value>', methods=['POST'])
     def add_game(key, value):
-      config = {
-          # User-specific properties that you must set
-          'bootstrap.servers': KAFKA_SERVER,
-
-          # Fixed properties
-          'acks': 'all'
-      }
-
-      # Create Producer instance
-      producer = Producer(config)
-
-      # Optional per-message delivery callback (triggered by poll() or flush())
-      # when a message has been successfully delivered or permanently
-      # failed delivery (after retries).
-      def delivery_callback(err, msg):
-          if err:
-              print('ERROR: Message failed delivery: {}'.format(err))
-          else:
-              print("Produced event to topic {topic}: key = {key:12} value = {value:12}".format(
-                  topic=msg.topic(), key=msg.key().decode('utf-8'), value=msg.value().decode('utf-8')))
-
       # Produce data by selecting random values from these lists.
       topic = "games"
 
